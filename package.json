@@ -1,0 +1,18 @@
+{
+  "name": "PlanOut-ClubEventSpider",
+  "version": "1.0.0",
+  "description": "Gather club events from Facebook",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "GCasanova",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.1.33",
+    "moment": "^2.10.3",
+    "properties-reader": "0.0.10",
+    "request": "^2.57.0",
+    "simple-rate-limiter": "^0.2.3"
+  }
+}

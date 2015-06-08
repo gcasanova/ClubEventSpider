@@ -1,0 +1,4 @@
+facebook.app.id = xxxxxxx
+facebook.access.token = xxxxxxx
+aws.access.key = xxxxxxx
+aws.secret.key = xxxxxxx
