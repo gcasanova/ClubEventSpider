@@ -17,8 +17,9 @@ var MAX_QUERY_TRIES = 3; // MAX NUMBER OF RETRIES WHEN SERVER ERROR
 var QUERY_RETRY_TIMEOUT = 2000; // WAIT 'QUERY_RETRY_TIMEOUT' SECONDS TO RETRY
 
 // COUNTERS
-var clubsCounter = 0;
-var clubsCounterDone = 0;
+var findEventsCounter = 0;
+var getEventDetailsCounter = 0;
+var saveEventCounter = 0;
 
 //Set AWS configuration for future requests.
 aws.config.update({"accessKeyId": AWS_ACCESS_KEY_ID, "secretAccessKey": AWS_SECRET_ACCESS_KEY, "region": "eu-west-1"});
@@ -49,7 +50,6 @@ function scanTable(lastKey) {
 		    	console.log(err, err.stack);
 		    	process.exit();
 		    } else {
-		    	clubsCounter = clubsCounter + data["Count"];
 		    	processItems(data);
 		    	if (data.LastEvaluatedKey != null) {
 		    		scanTable(data.LastEvaluatedKey);
@@ -65,7 +65,6 @@ function scanTable(lastKey) {
 		    	console.log(err, err.stack);
 		    	process.exit();
 		    } else {
-		    	clubsCounter = clubsCounter + data["Count"];
 		    	processItems(data);
 		    	if (data.LastEvaluatedKey != null) {
 		    		scanTable(data.LastEvaluatedKey);
@@ -87,6 +86,8 @@ function processItems(data) {
 }
 
 function findEvents(clubId, pageId, tryNumber) {
+	findEventsCounter++;
+
 	facebookPageEventsAPI(pageId, function(error, response, body) {
 		if (!error && response.statusCode === 200) {
 			var json = JSON.parse(body.toString());
@@ -96,6 +97,7 @@ function findEvents(clubId, pageId, tryNumber) {
 					getEventDetails(clubId, item.id, 1);
 				}
 			});
+			findEventsCounter--;
 		} else {
 			if (response !== undefined && response.statusCode === 500 && tryNumber <= MAX_QUERY_TRIES) {
 				tryNumber++;
@@ -124,16 +126,19 @@ function findEvents(clubId, pageId, tryNumber) {
 						}
 					}
 				}
-				clubsCounterDone++;
+				findEventsCounter--;
 			}
 		}
 	});
 }
 
 function getEventDetails(clubId, eventId, tryNumber) {
+	getEventDetailsCounter++;
+
 	facebookPageEventDetailsAPI(eventId, function(error, response, body) {
 		if (!error && response.statusCode === 200) {
 			saveEvent(clubId, JSON.parse(body.toString()));
+			getEventDetailsCounter--;
 		} else {
 			if (response !== undefined && response.statusCode === 500 && tryNumber <= MAX_QUERY_TRIES) {
 				tryNumber++;
@@ -162,12 +167,15 @@ function getEventDetails(clubId, eventId, tryNumber) {
 						}
 					}
 				}
+				getEventDetailsCounter--;
 			}
 		}
 	});
 }
 
 function saveEvent(clubId, event) {
+	saveEventCounter++;
+
 	var clubEvent = new Object();
 	clubEvent.id = event.id;
 	clubEvent.clubId = clubId;
@@ -222,6 +230,7 @@ var saveEventApi = limit(function(clubEvent) {
 		if (err) {
 			console.log("Save club event to dynamodb failed: " + err);
 		}
+		saveEventCounter--;
 	});
 }).to(2).per(1000);
 
@@ -229,5 +238,7 @@ var saveEventApi = limit(function(clubEvent) {
 scanTable(null);
 
 var interval = setInterval(function() {
-	//console.log(some counters);
-}, 10000);
+	console.log("findEventsCounter: " + findEventsCounter);
+	console.log("getEventDetailsCounter: " + getEventDetailsCounter);
+	console.log("saveEventCounter: " + saveEventCounter);
+}, 30000);
